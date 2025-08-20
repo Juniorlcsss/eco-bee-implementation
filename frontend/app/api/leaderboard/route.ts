@@ -61,12 +61,14 @@ export async function GET(request: NextRequest) {
 
     // Transform data to match expected format
     const leaderboard = (result.data || []).map((entry, index) => ({
-      id: index + 1,
-      user_name: entry.pseudonym,
-      eco_score: 100 - entry.composite_score, // Invert score (lower is better in our system)
       rank: index + 1,
-      environmental_actions_taken: Math.floor(Math.random() * 50) + 10, // Mock for now
-      created_at: entry.created_at || new Date().toISOString(),
+      user_id: entry.user_id,
+      composite_score: entry.composite_score, // Use the actual score (higher is better)
+      grade: entry.grade || calculateGrade(entry.composite_score),
+      campus_affiliation: entry.campus_affiliation || "Unknown Campus",
+      timestamp: entry.created_at || new Date().toISOString(),
+      boundary_scores: entry.boundary_scores,
+      pseudonym: entry.pseudonym || `User${index + 1}`,
     }));
 
     return NextResponse.json({
@@ -86,4 +88,20 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to calculate grade from score
+function calculateGrade(score: number): string {
+  if (score >= 90) return "A+";
+  if (score >= 85) return "A";
+  if (score >= 80) return "A-";
+  if (score >= 75) return "B+";
+  if (score >= 70) return "B";
+  if (score >= 65) return "B-";
+  if (score >= 60) return "C+";
+  if (score >= 55) return "C";
+  if (score >= 50) return "C-";
+  if (score >= 45) return "D+";
+  if (score >= 40) return "D";
+  return "F";
 }

@@ -193,6 +193,12 @@ export default function BarcodeScanner({
 
       if (!response.ok) {
         const errorText = await response.text();
+        
+        // Check if it's a network/backend unavailable error
+        if (response.status >= 500 || response.status === 0) {
+          throw new Error("Backend service unavailable - barcode scanning requires the Python backend to be running");
+        }
+        
         throw new Error(
           `API request failed: ${response.status} - ${errorText}`
         );
@@ -205,6 +211,18 @@ export default function BarcodeScanner({
         onBarcodeDetected(result.barcode, result.product_info, result);
       }
     } catch (error) {
+      // Handle network errors (backend not running)
+      let errorMessage = "Failed to scan barcode. Please try again.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes("fetch") || error.message.includes("NetworkError") || 
+            error.message.includes("Backend service unavailable")) {
+          errorMessage = "⚠️ Offline Mode: Barcode scanning requires the Python backend. Run 'python backend/simple_server.py' to enable this feature.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       setResult({
         success: false,
         barcode: null,
@@ -212,10 +230,7 @@ export default function BarcodeScanner({
         product_details: null,
         sustainability: null,
         detected: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to scan barcode. Please try again.",
+        error: errorMessage,
       });
     } finally {
       setLoading(false);

@@ -198,12 +198,13 @@ What area would you like to focus on first?`;
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       console.error("❌ Error calling chat API:", error);
+      console.log("💡 Using offline mode - generating local response");
 
       // Fallback to local response if API fails
       const fallbackResponse = generateFallbackResponse(text.trim());
       const botMessage: Message = {
         id: getNextMessageId(),
-        text: fallbackResponse,
+        text: fallbackResponse + "\n\n💡 *Running in offline mode - install and run Python backend for AI responses*",
         isUser: false,
         timestamp: new Date(),
       };

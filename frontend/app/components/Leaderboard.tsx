@@ -16,6 +16,7 @@ interface LeaderboardEntry {
   grade?: string;
   campus_affiliation?: string;
   timestamp?: string;
+  pseudonym?: string;
   boundary_scores?: {
     climate: number;
     biosphere: number;
@@ -53,10 +54,78 @@ export default function Leaderboard({ onBack }: LeaderboardProps) {
       setLeaderboardData(data.leaderboard || []);
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
-      setError("Failed to load leaderboard data");
+      
+      // Check if it's a network/backend error and provide fallback
+      if (error instanceof Error && 
+          (error.message.includes("fetch") || error.message.includes("NetworkError"))) {
+        setError("⚠️ Offline Mode: Leaderboard requires the Python backend. Run 'python backend/simple_server.py' to view real leaderboard data.");
+        
+        // Provide mock leaderboard data for demonstration
+        setLeaderboardData([
+          {
+            rank: 1,
+            user_id: "EcoChampion",
+            composite_score: 8.7,
+            grade: "A",
+            campus_affiliation: "Demo Campus",
+            timestamp: new Date().toISOString()
+          },
+          {
+            rank: 2,
+            user_id: "GreenGuru",
+            composite_score: 8.2,
+            grade: "A",
+            campus_affiliation: "Demo Campus",
+            timestamp: new Date().toISOString()
+          },
+          {
+            rank: 3,
+            user_id: "EcoWarrior",
+            composite_score: 7.8,
+            grade: "B+",
+            campus_affiliation: "Demo Campus",
+            timestamp: new Date().toISOString()
+          },
+          {
+            rank: 4,
+            user_id: "NatureLover",
+            composite_score: 7.3,
+            grade: "B",
+            campus_affiliation: "Demo Campus",
+            timestamp: new Date().toISOString()
+          },
+          {
+            rank: 5,
+            user_id: "EcoFriend",
+            composite_score: 6.9,
+            grade: "B-",
+            campus_affiliation: "Demo Campus",
+            timestamp: new Date().toISOString()
+          }
+        ]);
+      } else {
+        setError("Failed to load leaderboard data");
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const generateAlias = (userId: string, index: number) => {
+    // If userId is already a readable alias, use it
+    if (userId && !userId.includes('demo_user') && !userId.includes('user_') && userId.length > 8) {
+      return userId;
+    }
+    
+    // Generate eco-themed aliases
+    const ecoAliases = [
+      'EcoChampion', 'GreenGuru', 'EcoWarrior', 'NatureLover', 'EcoFriend',
+      'TreeHugger', 'GreenThumb', 'EcoHero', 'PlanetGuard', 'GreenKnight',
+      'EcoMaster', 'LeafWhisper', 'GreenSage', 'EcoExplorer', 'NatureWise',
+      'EcoVibes', 'GreenSpark', 'EcoStar', 'GreenWave', 'EcoSpirit'
+    ];
+    
+    return ecoAliases[index % ecoAliases.length] || `EcoUser${index + 1}`;
   };
 
   const getRankIcon = (rank: number) => {
@@ -166,13 +235,13 @@ export default function Leaderboard({ onBack }: LeaderboardProps) {
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
                   {leaderboardData.length > 0
-                    ? Math.round(
+                    ? (
                         leaderboardData.reduce(
                           (sum, entry) => sum + (entry.composite_score || 0),
                           0
                         ) / leaderboardData.length
-                      )
-                    : 0}
+                      ).toFixed(1)
+                    : "0.0"}
                 </div>
                 <div className="text-sm text-gray-600">Average Score</div>
               </div>
@@ -207,51 +276,88 @@ export default function Leaderboard({ onBack }: LeaderboardProps) {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {leaderboardData.slice(0, 20).map((entry, index) => (
-                  <div
-                    key={entry.user_id || `entry-${index}`}
-                    className={`flex items-center justify-between p-4 rounded-xl transition-all duration-200 hover:shadow-md ${
-                      index < 3
-                        ? "bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200"
-                        : "bg-gray-50 hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-4">
-                      {getRankIcon(entry.rank || index + 1)}
-                      <div>
-                        <div className="font-semibold text-gray-800">
-                          User #
-                          {entry.user_id
-                            ? entry.user_id.substring(0, 8)
-                            : "Anonymous"}
-                          ...
-                        </div>
-                        {entry.campus_affiliation && (
-                          <div className="text-sm text-gray-600">
-                            {entry.campus_affiliation}
+              <div className="space-y-4">
+                {/* Top 3 Podium */}
+                {leaderboardData.slice(0, 3).length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">
+                      🏆 Champions Podium
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                      {leaderboardData.slice(0, 3).map((entry, index) => (
+                        <div
+                          key={entry.user_id || `podium-${index}`}
+                          className={`relative overflow-hidden rounded-2xl transition-all duration-300 transform hover:scale-105 ${
+                            index === 0
+                              ? "bg-gradient-to-br from-yellow-400 via-yellow-500 to-orange-500 shadow-2xl shadow-yellow-500/30 md:order-2"
+                              : index === 1
+                              ? "bg-gradient-to-br from-gray-300 via-gray-400 to-gray-500 shadow-xl shadow-gray-400/30 md:order-1"
+                              : "bg-gradient-to-br from-orange-400 via-orange-500 to-red-500 shadow-xl shadow-orange-400/30 md:order-3"
+                          }`}
+                        >
+                          <div className="p-6 text-center text-white">
+                            <div className="text-4xl mb-2">
+                              {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                            </div>
+                            <div className="text-xl font-bold mb-2">
+                              {entry.pseudonym || generateAlias(entry.user_id || '', index)}
+                            </div>
+                            <div className="text-3xl font-bold mb-1">
+                              {(entry.composite_score || 0).toFixed(1)}
+                            </div>
+                            <div className="text-sm opacity-90 mb-2">EcoScore</div>
+                            <div className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
+                              index === 0 ? 'bg-white/20 text-white' : 'bg-white/20 text-white'
+                            }`}>
+                              Grade {entry.grade || "N/A"}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-gray-800">
-                          {entry.composite_score || 0}
                         </div>
-                        <div className="text-sm text-gray-600">EcoScore</div>
-                      </div>
-                      <div
-                        className={`px-3 py-1 rounded-full text-sm font-bold ${getGradeColor(
-                          entry.grade || "N/A"
-                        )}`}
-                      >
-                        {entry.grade || "N/A"}
-                      </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* Rest of leaderboard */}
+                {leaderboardData.length > 3 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">
+                      🌱 Other Eco Heroes
+                    </h3>
+                    <div className="space-y-2">
+                      {leaderboardData.slice(3, 20).map((entry, index) => (
+                        <div
+                          key={entry.user_id || `entry-${index + 3}`}
+                          className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all duration-200 hover:shadow-md"
+                        >
+                          <div className="flex items-center space-x-4">
+                            {getRankIcon(entry.rank || index + 4)}
+                            <div>
+                              <div className="font-semibold text-gray-800">
+                                {entry.pseudonym || generateAlias(entry.user_id || '', index + 3)} - {(entry.composite_score || 0).toFixed(1)}
+                              </div>
+                              {entry.campus_affiliation && (
+                                <div className="text-sm text-gray-600">
+                                  {entry.campus_affiliation}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-4">
+                            <div
+                              className={`px-3 py-1 rounded-full text-sm font-bold ${getGradeColor(
+                                entry.grade || "N/A"
+                              )}`}
+                            >
+                              {entry.grade || "N/A"}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -16,7 +16,8 @@ export interface LeaderboardEntry {
   user_id: string;
   pseudonym: string;
   composite_score: number;
-  boundary_scores: Record<string, number>;
+  grade?: string;
+  boundary_scores?: Record<string, number>;
   campus_affiliation: string;
   created_at?: string;
   quiz_responses?: any[];
@@ -69,11 +70,11 @@ export async function getLeaderboard(): Promise<{
   try {
     const supabase = createServerSupabaseClient();
 
-    // Use the leaderboard_display view for better performance and privacy
+    // Fetch from the leaderboard table directly since that's what exists in the database
     const { data, error } = await supabase
-      .from("leaderboard_display")
+      .from("leaderboard")
       .select("*")
-      .order("composite_score", { ascending: true }) // Lower scores are better
+      .order("composite_score", { ascending: false }) // Higher scores are better
       .limit(100);
 
     if (error) {
