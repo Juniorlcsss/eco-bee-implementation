@@ -40,7 +40,6 @@ export default function EnhancedQuiz({ onComplete }: EnhancedQuizProps) {
 
   const [currentAnswer, setCurrentAnswer] = useState<any>(null);
   const [showBarcode, setShowBarcode] = useState(false);
-  const [showImageCapture, setShowImageCapture] = useState(false);
   const [errors, setErrors] = useState<string | null>(null);
   const [scannedProduct, setScannedProduct] = useState<any>(null);
 
@@ -630,13 +629,6 @@ export default function EnhancedQuiz({ onComplete }: EnhancedQuizProps) {
             >
               <FaImage />
               <span>Scan Barcode</span>
-            </button>
-            <button
-              onClick={() => setShowImageCapture(true)}
-              className="btn"
-            >
-              <FaImage />
-              <span>Take Photo</span>
             </button>
           </div>
         )}

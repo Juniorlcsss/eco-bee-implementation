@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useRef, useCallback } from "react";
 import {
-  FaCamera,
   FaUpload,
   FaBarcode,
   FaTimes,
@@ -69,76 +68,9 @@ export default function BarcodeScanner({
   onClose,
   productType = "food",
 }: BarcodeScannerProps) {
-  const [isScanning, setIsScanning] = useState(false);
-  const [stream, setStream] = useState<MediaStream | null>(null);
   const [result, setResult] = useState<BarcodeResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const startCamera = useCallback(async () => {
-    try {
-      setLoading(true);
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment", // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      });
-
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        videoRef.current.play();
-      }
-      setIsScanning(true);
-    } catch (error) {
-      console.error("Error accessing camera:", error);
-      alert(
-        "Could not access camera. Please ensure camera permissions are granted."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const stopCamera = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-    }
-    setIsScanning(false);
-  }, [stream]);
-
-  const captureImage = useCallback(async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-
-    // Set canvas dimensions to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    // Draw video frame to canvas
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Convert canvas to blob
-    canvas.toBlob(
-      async (blob) => {
-        if (!blob) return;
-        console.log("Camera captured image blob:", blob.size, "bytes");
-        await scanImage(blob);
-      },
-      "image/jpeg",
-      0.8
-    );
-  }, []);
 
   const handleFileUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -269,19 +201,12 @@ export default function BarcodeScanner({
           </div>
         )}
 
-        {!isScanning && !result && !loading && (
+        {!result && !loading && (
           <div className="space-y-4">
             <p className="text-gray-600 text-sm mb-4">
-              Scan a barcode using your camera or upload an image
+              Upload a barcode image to get sustainability insights
+              Note: Images uploaded are not stored by Eco-Bee
             </p>
-
-            <button
-              onClick={startCamera}
-              className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <FaCamera className="mr-2" />
-              Use Camera
-            </button>
 
             <div className="relative">
               <input
@@ -301,51 +226,6 @@ export default function BarcodeScanner({
                 Upload Image
               </button>
             </div>
-          </div>
-        )}
-
-        {isScanning && (
-          <div className="space-y-4">
-            <div className="relative">
-              <video
-                ref={videoRef}
-                className="w-full rounded-lg"
-                playsInline
-                muted
-              />
-              <canvas ref={canvasRef} className="hidden" />
-
-              {/* Scanning overlay */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="border-2 border-white rounded-lg w-48 h-32 relative">
-                  <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-blue-400"></div>
-                  <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-blue-400"></div>
-                  <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-blue-400"></div>
-                  <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-blue-400"></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex space-x-2">
-              <button
-                onClick={captureImage}
-                disabled={loading}
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                <FaCamera className="mr-2" />
-                Capture
-              </button>
-              <button
-                onClick={stopCamera}
-                className="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-
-            <p className="text-sm text-gray-600 text-center">
-              Position the barcode within the frame and tap Capture
-            </p>
           </div>
         )}
 

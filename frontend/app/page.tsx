@@ -20,7 +20,6 @@ import {
   FaComments,
   FaRobot,
   FaBarcode,
-  FaCamera,
 } from "react-icons/fa";
 
 type AppState =
@@ -294,14 +293,7 @@ export default function Home() {
           <FeatureCard
             icon={<FaBarcode />}
             title="Product Scanner"
-            description="Scan barcodes to get instant sustainability insights and eco-friendly alternatives"
-            onClick={() => setAppState("barcode-scanner")}
-          />
-
-          <FeatureCard
-            icon={<FaCamera />}
-            title="Image Recognition"
-            description="Take photos of food or clothing items to get personalized environmental impact analysis"
+            description="Scan barcodes to get instant sustainability insights and eco-friendly alternatives Note: Images uploaded are not stored by Eco-Bee"
             onClick={() => setAppState("barcode-scanner")}
           />
 
@@ -466,4 +458,12 @@ export default function Home() {
     default:
       return renderWelcome();
   }
+  return (
+    <>
+      {renderWelcome()}
+      <footer className="text-center text-xs text-gray-500 mt-8">
+        Note: Images uploaded are not stored by Eco-Bee
+      </footer>
+    </>
+  );
 }
