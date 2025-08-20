@@ -14,7 +14,6 @@ import {
   FaShareAlt,
   FaComments,
 } from "react-icons/fa";
-
 interface BoundaryScore {
   climate: number;
   biosphere: number;
@@ -22,14 +21,12 @@ interface BoundaryScore {
   freshwater: number;
   aerosols: number;
 }
-
 interface Recommendation {
   action: string;
   impact: string;
   boundary: string;
   current_score: number;
 }
-
 interface ScoringResult {
   items: any[];
   per_boundary_averages: BoundaryScore;
@@ -38,14 +35,12 @@ interface ScoringResult {
   recommendations: Recommendation[];
   boundary_details: any;
 }
-
 interface EcoScoreDisplayProps {
   scoringResult: ScoringResult;
   onRestart: () => void;
   onNext?: () => void;
   onGetTips?: () => void;
 }
-
 const BOUNDARY_ICONS = {
   climate: {
     icon: FaGlobe,
@@ -78,7 +73,10 @@ const BOUNDARY_ICONS = {
     name: "Aerosols & Novel Entities",
   },
 };
-
+// Visual constants for the score ring
+const RING_SIZE_PX = 144; // overall rendered size in pixels
+const RING_RADIUS = 45; // matches the SVG viewBox coordinate system (0-100)
+const RING_STROKE = 8; // stroke thickness
 const getGradeColor = (grade: string) => {
   switch (grade) {
     case "A+":
@@ -96,14 +94,12 @@ const getGradeColor = (grade: string) => {
       return "text-red-600 bg-red-100";
   }
 };
-
 const getScoreColor = (score: number) => {
   if (score <= 30) return "text-green-600";
   if (score <= 50) return "text-yellow-600";
   if (score <= 70) return "text-orange-600";
   return "text-red-600";
 };
-
 export default function EcoScoreDisplay({
   scoringResult,
   onRestart,
@@ -112,26 +108,10 @@ export default function EcoScoreDisplay({
 }: EcoScoreDisplayProps) {
   const router = useRouter();
   const [currentUrl, setCurrentUrl] = useState("");
-
   useEffect(() => {
     // Set the current URL after component mounts
     setCurrentUrl(window.location.href);
   }, []);
-
-  const getScoreStrokeColor = (score: number) => {
-    // Convert composite score (0-100, lower is better) to display score (0-100, higher is better)
-    const displayScore = 100 - score;
-    
-    if (displayScore >= 80) return "#10b981"; // Bright green for excellent scores
-    if (displayScore >= 70) return "#22c55e"; // Green for good scores
-    if (displayScore >= 60) return "#84cc16"; // Light green for above average
-    if (displayScore >= 50) return "#eab308"; // Yellow for average
-    if (displayScore >= 40) return "#f59e0b"; // Orange for below average
-    if (displayScore >= 30) return "#f97316"; // Orange-red for poor
-    if (displayScore >= 20) return "#ef4444"; // Red for very poor
-    return "#dc2626"; // Dark red for extremely poor scores
-  };
-
   const boundaryScores = Object.entries(
     scoringResult.per_boundary_averages
   ).map(([key, value]) => ({
@@ -139,15 +119,19 @@ export default function EcoScoreDisplay({
     value: Math.round(value),
     ...BOUNDARY_ICONS[key as keyof typeof BOUNDARY_ICONS],
   }));
-
+  const displayScore = Math.round(100 - scoringResult.composite);
+  const getSvgFontSize = (value: number) => {
+    // ViewBox is 0..100. Choose font sizes that fit within inner diameter.
+    if (value >= 100) return 20; // 3 digits
+    if (value >= 10) return 24; // 2 digits
+    return 28; // 1 digit
+  };
   const createRadialScore = (score: number) => {
-    const circumference = 2 * Math.PI * 42; // radius of 42 to match the circle
+    const circumference = 2 * Math.PI * RING_RADIUS;
     const strokeDasharray = circumference;
     const strokeDashoffset = circumference - (score / 100) * circumference;
-
     return { strokeDasharray, strokeDashoffset };
   };
-
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
@@ -163,7 +147,6 @@ export default function EcoScoreDisplay({
       alert("Score copied to clipboard!");
     }
   };
-
   // Get progress bar width class
   const getProgressBarClass = (value: number) => {
     const width = Math.max(5, 100 - value);
@@ -179,185 +162,193 @@ export default function EcoScoreDisplay({
     if (width >= 16) return "w-1/6";
     return "w-1/12";
   };
-
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 p-2 overflow-hidden">
-      <div className="max-w-7xl mx-auto h-full flex items-center">
-        <div className="glass overflow-hidden w-full h-[95vh]">
-          <div className="flex h-full">
-            {/* Left Side - Large Score Circle */}
-            <div className="w-1/2 flex items-center justify-center p-4">
-              <div className="flex items-center space-x-4">
-                <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
-                  <svg className="absolute inset-0 w-30 h-30 transform -rotate-90" viewBox="0 0 100 100" width="120" height="120">
-                    {/* Background circle */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="42"
-                      stroke="rgba(71, 85, 105, 0.3)"
-                      strokeWidth="6"
-                      fill="none"
-                    />
-                    {/* Score circle */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="42"
-                      stroke={getScoreStrokeColor(scoringResult.composite)}
-                      strokeWidth="6"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeDasharray={
-                        createRadialScore(100 - scoringResult.composite).strokeDasharray
-                      }
-                      strokeDashoffset={
-                        createRadialScore(100 - scoringResult.composite)
-                          .strokeDashoffset
-                      }
-                      className="transition-all duration-1000"
-                    />
-                  </svg>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-white leading-none mb-1">
-                    {Math.round(100 - scoringResult.composite)}
-                  </div>
-                  <div className="text-sm text-slate-300 leading-none mb-3">
-                    /100
-                  </div>
-                  <div className={`text-xl font-bold px-4 py-2 rounded-full ${getGradeColor(scoringResult.grade)} inline-block shadow-lg border-2 border-white/20 flex items-center space-x-2`}>
-                    <FaTrophy className="text-yellow-300" />
-                    <span>{scoringResult.grade}</span>
-                  </div>
-                </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="glass overflow-hidden relative">
+          {/* Fixed Floating Score Circle - Top Right */}
+          <div className="absolute top-4 right-4 z-10 glass-card-inner rounded-full p-2">
+            <div className="relative" style={{ width: RING_SIZE_PX, height: RING_SIZE_PX }}>
+              <svg className="w-36 h-36" viewBox="0 0 100 100" width={RING_SIZE_PX} height={RING_SIZE_PX}>
+                <g transform="rotate(-90, 50, 50)">
+                  {/* Background circle */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r={RING_RADIUS}
+                    stroke="rgba(71, 85, 105, 0.3)"
+                    strokeWidth={RING_STROKE}
+                    fill="none"
+                  />
+                  {/* Score circle */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r={RING_RADIUS}
+                    stroke={
+                      scoringResult.composite <= 30
+                        ? "#10b981"
+                        : scoringResult.composite <= 60
+                        ? "#f59e0b"
+                        : "#ef4444"
+                    }
+                    strokeWidth={RING_STROKE}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={
+                      createRadialScore(100 - scoringResult.composite).strokeDasharray
+                    }
+                    strokeDashoffset={
+                      createRadialScore(100 - scoringResult.composite).strokeDashoffset
+                    }
+                    className="transition-all duration-1000"
+                  />
+                </g>
+                {/* Centered score text inside SVG (upright) */}
+                <text
+                  x="50"
+                  y="50"
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill="#ffffff"
+                  fontWeight="800"
+                  fontSize={getSvgFontSize(displayScore)}
+                >
+                  {displayScore}
+                </text>
+          </svg>
+        </div>
+        <div
+          className={`mt-1 text-xs font-bold px-2 py-0.5 rounded-full text-center ${getGradeColor(
+            scoringResult.grade
+          )}`}
+        >
+          {scoringResult.grade}
+        </div>
+      </div>
+      {/* Header */}
+      <div className="glass-header text-center p-6">
+        <div className="icon-badge">
+          <FaTrophy className="text-4xl text-yellow-400" />
+        </div>
+        <h1 className="neon-title text-3xl font-bold mb-2">Your EcoBee Score</h1>
+        <p className="text-slate-300 text-sm">
+          Environmental Impact Assessment
+        </p>
+      </div>
+      {/* Boundary Breakdown */}
+      <div className="glass-card-inner p-6 border-b border-gray-700/30">
+        <h2 className="text-lg font-bold text-white mb-4 flex items-center">
+          <FaGlobe className="mr-2 text-blue-400" />
+          Planetary Boundary Breakdown
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {boundaryScores.map(({ key, value, icon: Icon, color, bg, name }) => (
+            <div key={key} className="bg-gray-700/30 p-4 rounded-xl border border-gray-600/30">
+              <div className="flex items-center justify-between mb-2">
+                <Icon className={`text-xl ${color}`} />
+                <span className={`text-xl font-bold ${getScoreColor(value)} text-white`}>
+                  {Math.round(100 - value)}
+                </span>
+              </div>
+              <h3 className="font-semibold text-white text-sm mb-2">{name}</h3>
+              <div className="mt-1 bg-gray-600 rounded-full h-2 overflow-hidden">
+                <div
+                  className={`h-2 rounded-full transition-all duration-500 ${
+                    value <= 30
+                      ? "bg-green-500"
+                      : value <= 60
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  } ${getProgressBarClass(value)}`}
+                />
               </div>
             </div>
-
-            {/* Right Side - Content */}
-            <div className="w-1/2 flex flex-col h-full">
-              {/* Header */}
-              <div className="glass-header text-center p-3 border-b border-gray-700/30">
-                <h1 className="neon-title text-lg font-bold mb-1">
-                  Your EcoBee Score
-                </h1>
-                <p className="text-slate-300 text-xs">Environmental Impact Assessment</p>
-              </div>
-
-              {/* Boundary Breakdown */}
-              <div className="glass-card-inner p-2 border-b border-gray-700/30 flex-1 min-h-0">
-                <h2 className="text-xs font-bold text-white mb-2 flex items-center">
-                  <FaGlobe className="mr-1 text-blue-400 text-xs" />
-                  Planetary Boundaries
-                </h2>
-
-                <div className="space-y-1">
-                  {boundaryScores.map(({ key, value, icon: Icon, color, bg, name }) => (
-                    <div key={key} className="bg-gray-700/30 p-1.5 rounded border border-gray-600/30 flex items-center justify-between">
-                      <div className="flex items-center space-x-1.5 flex-1 min-w-0">
-                        <Icon className={`text-xs ${color} flex-shrink-0`} />
-                        <h3 className="font-medium text-white text-xs truncate">{name.replace(' Integrity', '').replace(' Change', '').replace(' Flows', '').replace(' Use', '').replace(' & Novel Entities', '')}</h3>
-                      </div>
-                      <div className="flex items-center space-x-1.5 flex-shrink-0">
-                        <span className="text-xs font-bold text-white w-6 text-right">
-                          {Math.round(100 - value)}
-                        </span>
-                        <div className="w-8 bg-gray-600 rounded-full h-1 overflow-hidden">
-                          <div
-                            className={`h-1 rounded-full transition-all duration-500 ${
-                              value <= 30
-                                ? "bg-green-500"
-                                : value <= 60
-                                ? "bg-yellow-500"
-                                : "bg-red-500"
-                            } ${getProgressBarClass(value)}`}
-                          />
-                        </div>
-                      </div>
+          ))}
+        </div>
+      </div>
+      {/* Recommendations */}
+      {scoringResult.recommendations &&
+        scoringResult.recommendations.length > 0 && (
+          <div className="glass-card-inner p-6 border-b border-gray-700/30">
+            <h2 className="text-lg font-bold text-white mb-4 flex items-center">
+              <FaLightbulb className="mr-2 text-yellow-400" />
+              Your Top Improvement Actions
+            </h2>
+            <div className="space-y-3">
+              {scoringResult.recommendations.slice(0, 3).map((rec, index) => (
+                <div
+                  key={index}
+                  className="bg-gradient-to-r from-blue-600/20 to-green-600/20 border border-blue-500/30 rounded-xl p-4"
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-blue-500/20 text-blue-400 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm border border-blue-500/30">
+                      {index + 1}
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recommendations */}
-              {scoringResult.recommendations &&
-                scoringResult.recommendations.length > 0 && (
-                  <div className="glass-card-inner p-2 border-b border-gray-700/30 flex-1 min-h-0">
-                    <h2 className="text-xs font-bold text-white mb-2 flex items-center">
-                      <FaLightbulb className="mr-1 text-yellow-400 text-xs" />
-                      Top Actions
-                    </h2>
-
-                    <div className="space-y-1">
-                      {scoringResult.recommendations.slice(0, 2).map((rec, index) => (
-                        <div
-                          key={index}
-                          className="bg-gradient-to-r from-blue-600/20 to-green-600/20 border border-blue-500/30 rounded p-2"
-                        >
-                          <div className="flex items-start space-x-1.5">
-                            <div className="bg-blue-500/20 text-blue-400 rounded-full w-4 h-4 flex items-center justify-center font-bold text-xs border border-blue-500/30 flex-shrink-0">
-                              {index + 1}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-white text-xs mb-0.5 leading-tight">
-                                {rec.action}
-                              </h3>
-                              <p className="text-slate-300 text-xs leading-tight line-clamp-2">{rec.impact}</p>
-                              <div className="flex items-center space-x-1 mt-0.5">
-                                <span className="text-xs text-blue-400 bg-blue-500/20 px-1 py-0.5 rounded border border-blue-500/30">
-                                  {rec.boundary.split(' ')[0]}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex-1">
+                      <h3 className="font-bold text-white text-base mb-2">
+                        {rec.action}
+                      </h3>
+                      <p className="text-slate-300 mb-2 text-sm">{rec.impact}</p>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-blue-400 bg-blue-500/20 px-2 py-1 rounded-full border border-blue-500/30">
+                          {rec.boundary}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          Current score: {Math.round(100 - rec.current_score)}
+                          /100
+                        </span>
+                      </div>
                     </div>
                   </div>
-                )}
-
-              {/* Action Buttons */}
-              <div className="glass-card-inner p-2">
-                <div className="grid grid-cols-2 gap-1">
-                  <button
-                    onClick={handleShare}
-                    className="btn btn-primary text-xs py-1.5 px-2"
-                  >
-                    <FaShareAlt className="text-xs" />
-                    <span>Share</span>
-                  </button>
-
-                  <button
-                    onClick={onRestart}
-                    className="btn text-xs py-1.5 px-2 bg-gray-600/20 text-slate-300 border border-gray-600/30 rounded hover:bg-gray-600/30 hover:border-gray-500/50 transition-all duration-200 flex items-center justify-center space-x-1"
-                  >
-                    <FaArrowLeft className="text-xs" />
-                    <span>Retake</span>
-                  </button>
-
-                  {onGetTips && (
-                    <button
-                      onClick={onGetTips}
-                      className="btn btn-primary text-xs py-1.5 px-2"
-                    >
-                      <FaComments className="text-xs" />
-                      <span>Tips</span>
-                    </button>
-                  )}
-
-                  {onNext && (
-                    <button
-                      onClick={onNext}
-                      className="btn text-xs py-1.5 px-2 bg-green-600/20 text-green-400 border border-green-600/30 rounded hover:bg-green-600/30 hover:border-green-500/50 transition-all duration-200 flex items-center justify-center space-x-1"
-                    >
-                      <span>Board</span>
-                      <FaArrowRight className="text-xs" />
-                    </button>
-                  )}
                 </div>
-              </div>
+              ))}
             </div>
           </div>
+        )}
+      {/* Action Buttons */}
+      <div className="glass-card-inner p-6">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            onClick={handleShare}
+            className="btn btn-primary"
+          >
+            <FaShareAlt />
+            <span>Share Results</span>
+          </button>
+          <button
+            onClick={onRestart}
+            className="btn flex items-center justify-center space-x-2 px-6 py-3 bg-gray-600/20 text-slate-300 border border-gray-600/30 rounded-lg hover:bg-gray-600/30 hover:border-gray-500/50 transition-all duration-200"
+          >
+            <FaArrowLeft />
+            <span>Take Again</span>
+          </button>
+          {onGetTips && (
+            <button
+              onClick={onGetTips}
+              className="btn btn-primary"
+            >
+              <FaComments />
+              <span>Get Personalized Tips</span>
+            </button>
+          )}
+          {onNext && (
+            <button
+              onClick={onNext}
+              className="btn flex items-center justify-center space-x-2 px-6 py-3 bg-green-600/20 text-green-400 border border-green-600/30 rounded-lg hover:bg-green-600/30 hover:border-green-500/50 transition-all duration-200"
+            >
+              <span>View Leaderboard</span>
+              <FaArrowRight />
+            </button>
+          )}
+        </div>
+        <div className="text-center mt-4">
+          <p className="text-xs text-slate-400">
+            Want to improve your score? Check back regularly and track your
+            progress!
+          </p>
+        </div>
+      </div>
         </div>
       </div>
     </div>
